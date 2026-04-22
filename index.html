@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>My Finance Tracker</title>
   <style>
+    /* Default Light Mode Variables */
     :root {
       --bg-color: #eef2f5;
       --card-bg: #ffffff;
@@ -17,38 +18,66 @@
       --text-main: #2b2d42;
       --text-muted: #8d99ae;
       --accent: #457b9d;
+      --border-color: #eee;
+      --modal-overlay: rgba(0,0,0,0.4);
     }
 
-    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-
-    body {
-      background-color: var(--bg-color);
-      margin: 0;
-      padding: 0;
-      padding-bottom: 70px; 
+    /* Dark Mode Variables */
+    body.dark-mode {
+      --bg-color: #121212;
+      --card-bg: #1e1e1e;
+      --income-green: #1b4332;
+      --income-text: #74c69d;
+      --expense-red: #590d22;
+      --expense-text: #ff8fa3;
+      --savings-blue: #03045e;
+      --savings-text: #90e0ef;
+      --text-main: #f5f5f5;
+      --text-muted: #a0a0a0;
+      --accent: #4cc9f0;
+      --border-color: #333;
+      --modal-overlay: rgba(0,0,0,0.7);
     }
 
-    .app-container { width: 100vw; min-height: 100vh; padding: 20px; }
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background-color 0.3s ease, color 0.3s ease; }
 
-    hheader {
-      display: block; text-align: center; color: var(--accent);
-      font-weight: 800; letter-spacing: 2px; margin-bottom: 15px; margin-top: 10px;
-    }
+    body { background-color: var(--bg-color); margin: 0; padding: 0; padding-bottom: 70px; color: var(--text-main); }
 
-    /* STREAK BADGE CSS */
-    .streak-container { display: flex; justify-content: center; margin-bottom: 20px; }
-    .streak-badge {
-      background: linear-gradient(135deg, #ffe3e3 0%, #ffc0c0 100%);
-      color: #d90429;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-weight: bold;
-      font-size: 0.85rem;
-      box-shadow: 0 4px 10px rgba(217, 4, 41, 0.15);
-      display: flex;
-      align-items: center;
-      gap: 6px;
+    .app-container { width: 100vw; min-height: 100vh; padding: 20px; position: relative; }
+
+    hheader { display: block; text-align: center; color: var(--accent); font-weight: 800; letter-spacing: 2px; margin-bottom: 15px; margin-top: 20px; }
+
+    /* Dark Mode Toggle Button */
+    .theme-toggle { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted); padding: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; width: auto; font-weight: bold; }
+
+    /* TOAST NOTIFICATION */
+    #toast {
+      display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--text-main); color: var(--card-bg); padding: 12px 24px; border-radius: 30px;
+      z-index: 1000; font-size: 0.85rem; font-weight: bold; text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2); animation: fadeInDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); white-space: nowrap;
     }
+    @keyframes fadeInDown { from { opacity: 0; top: -20px; } to { opacity: 1; top: 20px; } }
+
+    /* CUSTOM ANIMATED MODAL */
+    #modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: var(--modal-overlay); backdrop-filter: blur(4px); z-index: 2000;
+      align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;
+    }
+    #modal-overlay.show { display: flex; opacity: 1; }
+    #custom-modal {
+      background: var(--card-bg); padding: 25px; border-radius: 24px; width: 85%; max-width: 350px;
+      text-align: center; transform: scale(0.8) translateY(20px); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    #modal-overlay.show #custom-modal { transform: scale(1) translateY(0); }
+    #custom-modal h3 { margin: 0 0 10px 0; color: var(--text-main); }
+    #custom-modal p { margin: 0 0 20px 0; color: var(--text-muted); font-size: 0.9rem; }
+    .modal-actions { display: flex; gap: 10px; justify-content: center; }
+    .modal-btn { flex: 1; padding: 12px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
+    .btn-cancel { background: var(--border-color); color: var(--text-main); }
+    .btn-confirm { background: var(--accent); color: white; }
 
     .view-section { display: none; animation: fadeIn 0.3s ease; }
     .view-section.active { display: block; }
@@ -57,19 +86,25 @@
     .net-worth { text-align: center; font-size: 2.5rem; font-weight: bold; color: var(--text-main); margin-bottom: 20px; }
     .net-worth span.label { display: block; font-size: 0.9rem; color: var(--text-muted); font-weight: normal; margin-bottom: 5px; }
 
-    .wallet-cards { display: flex; gap: 10px; margin-bottom: 20px; }
-    .card { flex: 1; padding: 15px; border-radius: 16px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
-    .card h3 { margin: 0 0 5px 0; font-size: 0.8rem; font-weight: normal; }
+    .wallet-cards { display: flex; gap: 10px; margin-bottom: 10px; }
+    .card { flex: 1; padding: 15px; border-radius: 16px; text-align: center; background: var(--card-bg); box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+    .card h3 { margin: 0 0 5px 0; font-size: 0.8rem; font-weight: normal; color: inherit; }
     .card p { margin: 0; font-size: 1.2rem; font-weight: bold; }
     
     .card.online { background-color: var(--income-green); color: var(--income-text); }
-    .card.cash { background-color: #e0e1dd; color: var(--text-main); }
-    .card.savings { background-color: var(--savings-blue); color: var(--savings-text); width: 100%; margin-bottom: 30px; }
+    .card.cash { background-color: var(--border-color); color: var(--text-main); }
+    .card.savings { background-color: var(--savings-blue); color: var(--savings-text); width: 100%; margin-bottom: 20px; }
 
     .card-panel { background: var(--card-bg); padding: 20px; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
     .form-group { display: flex; gap: 10px; margin-bottom: 10px; }
-    input, select, button { padding: 12px; border: 1px solid #eee; border-radius: 10px; font-size: 1rem; outline: none; width: 100%; background: #f9f9f9; }
+    input, select, button { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 1rem; outline: none; width: 100%; background: var(--bg-color); color: var(--text-main); }
     button.primary-btn { background-color: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; }
+    
+    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn-inc-online { background-color: var(--income-green); color: var(--income-text); border: none; font-weight: bold; cursor: pointer; }
+    .btn-inc-cash { background-color: var(--border-color); color: var(--text-main); border: none; font-weight: bold; cursor: pointer; }
+    .btn-exp-online { background-color: var(--expense-red); color: var(--expense-text); border: none; font-weight: bold; cursor: pointer; }
+    .btn-exp-cash { background-color: var(--border-color); color: var(--text-main); border: none; font-weight: bold; cursor: pointer; }
 
     h3.section-title { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
     .list-container { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
@@ -82,7 +117,7 @@
 
     .bottom-nav {
       position: fixed; bottom: 0; left: 0; width: 100%;
-      background: #ffffff; box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+      background: var(--card-bg); box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
       display: flex; justify-content: space-around; padding: 10px 0;
       padding-bottom: env(safe-area-inset-bottom, 10px); 
     }
@@ -94,23 +129,29 @@
     .nav-btn svg { width: 24px; height: 24px; fill: currentColor; }
     .nav-btn.active { color: var(--accent); }
     
-    .progress-bar { width: 100%; height: 6px; background: #eee; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+    .progress-bar { width: 100%; height: 6px; background: var(--border-color); border-radius: 3px; margin-top: 8px; overflow: hidden; }
     .progress-fill { height: 100%; background: var(--accent); width: 0%; }
-    
     .month-header { background: var(--accent); color: white; padding: 6px 15px; border-radius: 8px; font-weight: bold; font-size: 0.85rem; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
 
   </style>
 </head>
 <body>
 
-<div class="app-container">
-  <hheader>MY TRACKER</hheader>
-
-  <div class="streak-container">
-    <div class="streak-badge">
-      🔥 <span id="streak-count">0</span> Day Streak
+<div id="modal-overlay">
+  <div id="custom-modal">
+    <h3 id="modal-title">Alert</h3>
+    <p id="modal-msg">Message goes here.</p>
+    <div class="modal-actions">
+      <button class="modal-btn btn-cancel" id="modal-cancel">Cancel</button>
+      <button class="modal-btn btn-confirm" id="modal-confirm">OK</button>
     </div>
   </div>
+</div>
+
+<div id="toast">Welcome back!</div>
+
+<div class="app-container">
+  <hheader>MY TRACKER</hheader>
 
   <div id="view-home" class="view-section active">
     
@@ -120,24 +161,46 @@
       <div class="card online"><h3>Online</h3><p>Rs <span id="online-balance">0</span></p></div>
       <div class="card cash"><h3>Cash</h3><p>Rs <span id="cash-balance">0</span></p></div>
     </div>
+
+    <div class="card-panel" style="padding:15px; margin-bottom:15px;">
+      <h3 style="margin:0 0 10px 0; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">⇄ Transfer Funds</h3>
+      <div style="display:flex; gap:10px;">
+         <input type="number" id="transfer-amt" placeholder="Amount" min="0.01" step="0.01" style="padding:8px;">
+         <button onclick="transferWallet('cash', 'online')" style="background:var(--accent); color:white; border:none; border-radius:8px; padding:8px; cursor:pointer; font-size:0.8rem;">Cash ➔ Online</button>
+         <button onclick="transferWallet('online', 'cash')" style="background:var(--accent); color:white; border:none; border-radius:8px; padding:8px; cursor:pointer; font-size:0.8rem;">Online ➔ Cash</button>
+      </div>
+    </div>
     
-    <div class="card savings" style="margin-bottom: 25px;">
+    <div class="card savings">
       <h3>Locked in Savings Vault</h3>
       <p>Rs <span id="vault-balance">0</span></p>
+    </div>
+
+    <div class="card-panel" style="display:flex; justify-content:space-between; text-align:center; padding:15px;">
+      <div>
+        <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Today In</span><br>
+        <strong style="color:var(--income-text); font-size:1.1rem;">Rs <span id="today-in">0</span></strong>
+      </div>
+      <div>
+        <span style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Today Out</span><br>
+        <strong style="color:var(--expense-text); font-size:1.1rem;">Rs <span id="today-out">0</span></strong>
+      </div>
     </div>
 
     <h3 class="section-title">Log Activity</h3>
     <div class="card-panel">
       <form id="add-tx-form">
-        <div class="form-group">
-          <input type="text" id="tx-title" placeholder="E.g., Bangle sale" required>
-          <input type="number" id="tx-amount" placeholder="Amount" required min="1">
+        <div class="form-group" style="flex-direction: column;">
+          <input type="text" id="tx-title" placeholder="What was it? (e.g. Lunch)" required>
+          <input type="number" id="tx-amount" placeholder="Amount" required min="0.01" step="0.01">
         </div>
-        <div class="form-group">
-          <select id="tx-type"><option value="expense">Expense (-)</option><option value="income">Income (+)</option></select>
-          <select id="tx-wallet"><option value="online">Online</option><option value="cash">Cash</option></select>
+        <p style="font-size:0.75rem; color:var(--text-muted); text-align:center; margin: 5px 0 10px 0;">Tap a button below to save</p>
+        <div class="action-grid">
+          <button type="button" class="btn-inc-online" onclick="submitTx('income', 'online')">+ Add to Online</button>
+          <button type="button" class="btn-inc-cash" onclick="submitTx('income', 'cash')">+ Add to Cash</button>
+          <button type="button" class="btn-exp-online" onclick="submitTx('expense', 'online')">- Spend Online</button>
+          <button type="button" class="btn-exp-cash" onclick="submitTx('expense', 'cash')">- Spend Cash</button>
         </div>
-        <button type="submit" class="primary-btn">Add to Wallet</button>
       </form>
     </div>
 
@@ -151,7 +214,7 @@
       <form id="add-goal-form">
         <input type="text" id="goal-title" placeholder="What are we saving for?" required style="margin-bottom: 10px;">
         <div class="form-group">
-          <input type="number" id="goal-amount" placeholder="Target Rs" required min="1">
+          <input type="number" id="goal-amount" placeholder="Target Rs" required min="0.01" step="0.01">
           <input type="date" id="goal-date" required>
         </div>
         <button type="submit" class="primary-btn">Start Tracking</button>
@@ -165,11 +228,52 @@
   <div id="view-history" class="view-section">
     <h3 class="section-title">Full Transaction History</h3>
     
-    <button onclick="downloadCSV()" class="primary-btn" style="background-color: #2b2d42; margin-bottom: 20px;">
+    <button onclick="downloadCSV()" class="primary-btn" style="background-color: var(--accent); margin-bottom: 20px;">
       📥 Download to Excel (.csv)
     </button>
     
     <div class="list-container" id="history-list"></div>
+  </div>
+
+  <div id="view-settings" class="view-section">
+    <h3 class="section-title">Settings & Data</h3>
+    
+    <div class="card-panel">
+      <h3 style="margin:0 0 15px 0; color:var(--text-main);">Theme</h3>
+      <button onclick="toggleTheme()" style="background-color: var(--accent); color: white; border: none; border-radius: 8px; padding: 12px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 1rem;">
+        🌓 <span id="theme-status">Switch to Dark Mode</span>
+      </button>
+    </div>
+
+    <div class="card-panel">
+      <h3 style="margin:0 0 15px 0; color:var(--text-main);">Notifications</h3>
+      <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer;">
+        <input type="checkbox" id="sound-toggle" checked style="width: 20px; height: 20px; cursor: pointer;">
+        <span style="color: var(--text-main); font-size: 0.95rem;">🔊 Sound Effects</span>
+      </label>
+      <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+        <input type="checkbox" id="vibration-toggle" checked style="width: 20px; height: 20px; cursor: pointer;">
+        <span style="color: var(--text-main); font-size: 0.95rem;">📳 Vibration</span>
+      </label>
+      <p style="font-size: 0.75rem; color: var(--text-muted); margin: 10px 0 0 0;">Get feedback when you add income, spending, or complete actions.</p>
+    </div>
+    
+    <div class="card-panel">
+      <h3 style="margin:0 0 15px 0; color:var(--text-main);">Data Management</h3>
+      <button onclick="downloadCSV()" style="background-color: var(--accent); color: white; border: none; border-radius: 8px; padding: 12px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px;">
+        📥 Download to Excel (.csv)
+      </button>
+      <button onclick="clearAllData()" style="background-color: #e74c3c; color: white; border: none; border-radius: 8px; padding: 12px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px;">
+        🗑️ Clear All Data
+      </button>
+      <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">⚠️ This will permanently delete all transactions, goals, and saved data. This action cannot be undone.</p>
+    </div>
+
+    <div class="card-panel">
+      <h3 style="margin:0 0 10px 0; color:var(--text-main);">About</h3>
+      <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">📊 My Finance Tracker v1.0</p>
+      <p style="margin: 5px 0 0 0; font-size: 0.75rem; color: var(--text-muted);">Track your income, expenses, and savings goals with ease.</p>
+    </div>
   </div>
 
 </div>
@@ -187,57 +291,167 @@
     <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.64-2.25 1.64-1.74 0-2.33-.77-2.42-1.76H7.76c.14 1.8 1.5 2.92 3.14 3.28V19h2.34v-1.6c1.62-.3 2.81-1.38 2.81-2.92 0-2.38-2.23-2.96-3.74-3.34z"/></svg>
     Savings
   </button>
+  <button class="nav-btn" onclick="switchTab('settings')" id="nav-settings">
+    <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l1.72-1.34c.15-.12.19-.34.09-.51l-1.63-2.83c-.12-.22-.36-.29-.56-.22l-2.03.8c-.42-.32-.86-.58-1.35-.77l-.31-2.15c-.05-.24-.24-.41-.48-.41h-3.26c-.24 0-.43.17-.48.41l-.31 2.15c-.49.19-.93.45-1.35.77l-2.03-.8c-.2-.08-.44 0-.56.22L2.74 8.87c-.1.17-.05.39.09.51l1.72 1.34c-.05.3-.07.61-.07.94s.02.64.07.94l-1.72 1.34c-.15.12-.19.34-.09.51l1.63 2.83c.12.22.36.29.56.22l2.03-.8c.42.32.86.58 1.35.77l.31 2.15c.05.24.24.41.48.41h3.26c.24 0 .43-.17.48-.41l.31-2.15c.49-.19.93-.45 1.35-.77l2.03.8c.2.08.44 0 .56-.22l1.63-2.83c.12-.22.07-.44-.08-.51l-1.72-1.34zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+    Settings
+  </button>
 </nav>
 
 <script>
-  const TX_KEY = 'tracker_tx_v3';
-  const GOALS_KEY = 'tracker_goals_v3';
+  const TX_KEY = 'tracker_tx_v4';
+  const GOALS_KEY = 'tracker_goals_v4';
+  const THEME_KEY = 'tracker_theme';
 
-  // --- TAB NAVIGATION ---
+  // --- AUDIO & VIBRATION ENGINE ---
+  function playSound(type) {
+    if (!document.getElementById('sound-toggle') || !document.getElementById('sound-toggle').checked) return;
+    
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      
+      gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      switch(type) {
+        case 'income':
+          oscillator.frequency.value = 800;
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.15);
+          break;
+        case 'expense':
+          oscillator.frequency.value = 400;
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.2);
+          break;
+        case 'transfer':
+          oscillator.frequency.value = 600;
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.15);
+          break;
+        case 'goal':
+          oscillator.frequency.value = 900;
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.1);
+          break;
+        case 'success':
+          oscillator.frequency.value = 1000;
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.1);
+          break;
+        case 'switch':
+          oscillator.frequency.value = 700;
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.08);
+          break;
+      }
+    } catch(e) {
+      // Audio context not supported, silently fail
+    }
+  }
+
+  function vibrate(pattern) {
+    if (!document.getElementById('vibration-toggle') || !document.getElementById('vibration-toggle').checked) return;
+    if (navigator.vibrate) {
+      navigator.vibrate(pattern);
+    }
+  }
+
+  // --- THEME ENGINE ---
+  function updateThemeStatus() {
+    const isDark = document.body.classList.contains('dark-mode');
+    const statusEl = document.getElementById('theme-status');
+    if (statusEl) {
+      statusEl.innerText = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+    }
+  }
+
+  function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+    updateThemeStatus();
+    playSound('switch');
+    vibrate(50);
+  }
+
+  // --- CUSTOM MODAL ENGINE ---
+  function showAlert(title, msg, isConfirm, onConfirm) {
+    const overlay = document.getElementById('modal-overlay');
+    document.getElementById('modal-title').innerText = title;
+    document.getElementById('modal-msg').innerText = msg;
+    
+    const btnCancel = document.getElementById('modal-cancel');
+    const btnConfirm = document.getElementById('modal-confirm');
+    
+    btnCancel.style.display = isConfirm ? 'block' : 'none';
+    
+    btnConfirm.onclick = function() {
+      overlay.classList.remove('show');
+      setTimeout(() => { 
+        overlay.style.display = 'none';
+        if(onConfirm) onConfirm(); 
+      }, 300); // Wait for animation
+    };
+    
+    btnCancel.onclick = function() {
+      overlay.classList.remove('show');
+      setTimeout(() => { overlay.style.display = 'none'; }, 300);
+    };
+
+    overlay.style.display = 'flex';
+    // Trigger reflow to start CSS animation
+    void overlay.offsetWidth; 
+    overlay.classList.add('show');
+  }
+
+  // --- BOOT UP ---
+  window.onload = function() {
+    if (localStorage.getItem(THEME_KEY) === 'dark') document.body.classList.add('dark-mode');
+    updateThemeStatus();
+    
+    const msgs = ["Let's crush today's targets!", "Track every single rupee.", "Keep the consistency alive!", "Every entry counts."];
+    const toast = document.getElementById('toast');
+    toast.innerText = msgs[Math.floor(Math.random() * msgs.length)];
+    toast.style.display = 'block';
+    setTimeout(() => toast.style.display = 'none', 3000);
+  };
+
   function switchTab(tabId) {
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
     document.getElementById('view-' + tabId).classList.add('active');
     document.getElementById('nav-' + tabId).classList.add('active');
+    window.scrollTo(0, 0);
   }
 
-  // --- DATA FETCHING ---
   function getTransactions() { return JSON.parse(localStorage.getItem(TX_KEY)) || []; }
   function getGoals() { return JSON.parse(localStorage.getItem(GOALS_KEY)) || []; }
 
-  // --- STREAK ENGINE ---
-  function calculateStreak() {
-    const txs = getTransactions();
-    if (txs.length === 0) return 0;
-
-    const dates = [...new Set(txs.map(t => new Date(t.date).toLocaleDateString('en-CA')))].sort((a,b) => b.localeCompare(a)); 
-    const todayStr = new Date().toLocaleDateString('en-CA');
-    
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toLocaleDateString('en-CA');
-
-    if (dates[0] !== todayStr && dates[0] !== yesterdayStr) return 0;
-
-    let streak = 0;
-    let currentDate = new Date(dates[0]); 
-
-    for (const dStr of dates) {
-      const expectedStr = currentDate.toLocaleDateString('en-CA');
-      if (dStr === expectedStr) {
-        streak++; 
-        currentDate.setDate(currentDate.getDate() - 1); 
-      } else { break; }
-    }
-    return streak;
+  // --- GET CURRENT WALLET BALANCE ---
+  function getWalletBalance(wallet) {
+    const transactions = getTransactions();
+    let balance = 0;
+    transactions.forEach(tx => {
+      if (tx.wallet === wallet) {
+        const multiplier = tx.type === 'income' ? 1 : -1;
+        balance += tx.amount * multiplier;
+      }
+    });
+    return balance;
   }
 
-  // --- MAIN RENDER ENGINE ---
   function renderApp() {
     const transactions = getTransactions();
     const goals = getGoals();
     
     let cashBal = 0, onlineBal = 0, vaultBal = 0;
+    let todayIn = 0, todayOut = 0;
+    const todayStr = new Date().toLocaleDateString('en-CA');
+
     goals.forEach(g => { vaultBal += (g.saved || 0); });
 
     const txListEl = document.getElementById('tx-list');
@@ -246,134 +460,221 @@
     txListEl.innerHTML = '';
     historyListEl.innerHTML = '';
     
-    // 1. Calculate Balances & Group History by Month
     const historyGroups = {};
 
     transactions.forEach(tx => {
-      // Math
       const multiplier = tx.type === 'income' ? 1 : -1;
       const finalAmt = tx.amount * multiplier;
       if (tx.wallet === 'cash') cashBal += finalAmt;
       else onlineBal += finalAmt;
 
-      // Grouping logic for History Tab
+      const txDateStr = new Date(tx.date).toLocaleDateString('en-CA');
+      if (txDateStr === todayStr && tx.title !== "Transfer to Vault" && tx.title !== "Wallet Transfer") {
+        if (tx.type === 'income') todayIn += tx.amount;
+        if (tx.type === 'expense') todayOut += tx.amount;
+      }
+
       const dateObj = new Date(tx.date);
       const monthYear = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
       if(!historyGroups[monthYear]) historyGroups[monthYear] = [];
       historyGroups[monthYear].push(tx);
     });
 
-    // 2. Render Full History Grouped by Month
-    for (const [monthYear, groupTxs] of Object.entries(historyGroups)) {
-      historyListEl.insertAdjacentHTML('beforeend', `<div class="month-header">${monthYear}</div>`);
-      
-      groupTxs.forEach(tx => {
+    // Render history with empty state
+    if (Object.keys(historyGroups).length === 0) {
+      historyListEl.innerHTML = '<div style="text-align: center; padding: 30px 20px; color: var(--text-muted);"><p style="font-size: 1.2rem; margin: 0 0 5px 0;">📊 No transactions yet</p><p style="margin: 0; font-size: 0.9rem;">Your transaction history will appear here.</p></div>';
+    } else {
+      for (const [monthYear, groupTxs] of Object.entries(historyGroups)) {
+        historyListEl.insertAdjacentHTML('beforeend', `<div class="month-header">${monthYear}</div>`);
+        
+        groupTxs.forEach(tx => {
+          const dateObj = new Date(tx.date);
+          const timeStr = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const sign = tx.type === 'income' ? '+' : '-';
+          
+          historyListEl.insertAdjacentHTML('beforeend', `
+            <div class="list-item">
+              <div class="item-info"><h4>${tx.title}</h4><p>${tx.wallet.toUpperCase()} • ${timeStr}</p></div>
+              <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="tx-amount ${tx.type}">${sign}${tx.amount}</div>
+                <button onclick="deleteTransaction('${tx.id}')" style="background:transparent; border:none; color:var(--expense-text); font-size:1.2rem; cursor:pointer; padding:0;">🗑️</button>
+              </div>
+            </div>
+          `);
+        });
+      }
+    }
+
+    // Render recent with empty state
+    const recentTx = transactions.slice(0, 5);
+    if (recentTx.length === 0) {
+      txListEl.innerHTML = '<div style="text-align: center; padding: 30px 20px; color: var(--text-muted);"><p style="font-size: 1.2rem; margin: 0 0 5px 0;">✨ No activity yet</p><p style="margin: 0; font-size: 0.9rem;">Start by adding your first transaction!</p></div>';
+    } else {
+      recentTx.forEach(tx => {
         const dateObj = new Date(tx.date);
         const timeStr = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const sign = tx.type === 'income' ? '+' : '-';
         
-        historyListEl.insertAdjacentHTML('beforeend', `
+        txListEl.insertAdjacentHTML('beforeend', `
           <div class="list-item">
-            <div class="item-info">
-              <h4>${tx.title}</h4>
-              <p>${tx.wallet.toUpperCase()} • ${timeStr}</p>
-            </div>
-            <div style="display: flex; align-items: center; gap: 15px;">
-              <div class="tx-amount ${tx.type}">${sign}${tx.amount}</div>
-              <button onclick="deleteTransaction('${tx.id}')" style="background: transparent; border: none; color: #d90429; font-size: 1.2rem; width: auto; padding: 0; margin: 0; cursor: pointer;">
-                🗑️
-              </button>
-            </div>
+            <div class="item-info"><h4>${tx.title}</h4><p>${tx.wallet.toUpperCase()} • ${timeStr}</p></div>
+            <div class="tx-amount ${tx.type}">${sign}${tx.amount}</div>
           </div>
         `);
       });
     }
 
-    // 3. Render Recent 5 on Dashboard
-    const recentTx = transactions.slice(0, 5);
-    recentTx.forEach(tx => {
-      const dateObj = new Date(tx.date);
-      const timeStr = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const sign = tx.type === 'income' ? '+' : '-';
-      
-      txListEl.insertAdjacentHTML('beforeend', `
-        <div class="list-item">
-          <div class="item-info"><h4>${tx.title}</h4><p>${tx.wallet.toUpperCase()} • ${timeStr}</p></div>
-          <div class="tx-amount ${tx.type}">${sign}${tx.amount}</div>
-        </div>
-      `);
-    });
-
-    // 4. Update Header Numbers
     document.getElementById('total-balance').innerText = (cashBal + onlineBal).toLocaleString();
     document.getElementById('cash-balance').innerText = cashBal.toLocaleString();
     document.getElementById('online-balance').innerText = onlineBal.toLocaleString();
     document.getElementById('vault-balance').innerText = vaultBal.toLocaleString();
-    document.getElementById('streak-count').innerText = calculateStreak();
+    document.getElementById('today-in').innerText = todayIn.toLocaleString();
+    document.getElementById('today-out').innerText = todayOut.toLocaleString();
 
-    // 5. Render Savings Goals
     const goalsListEl = document.getElementById('goals-list');
     goalsListEl.innerHTML = '';
     const today = new Date();
     today.setHours(0,0,0,0);
 
-    goals.forEach((goal, index) => {
-      const targetDate = new Date(goal.date);
-      const diffTime = targetDate - today;
-      const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      const saved = goal.saved || 0;
-      const remaining = goal.amount - saved;
-      const percent = Math.min((saved / goal.amount) * 100, 100);
-      
-      let statusText = "";
-      if (remaining <= 0) statusText = "Goal Reached! 🎉";
-      else if (daysLeft > 0) statusText = `Need Rs ${(remaining / daysLeft).toFixed(0)} / day`;
-      else statusText = "Target date passed";
+    if (goals.length === 0) {
+      goalsListEl.innerHTML = '<div style="text-align: center; padding: 30px 20px; color: var(--text-muted);"><p style="font-size: 1.2rem; margin: 0 0 5px 0;">🎯 No goals yet</p><p style="margin: 0; font-size: 0.9rem;">Create your first savings goal above!</p></div>';
+    } else {
+      goals.forEach((goal, index) => {
+        const targetDate = new Date(goal.date);
+        const diffTime = targetDate - today;
+        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        const saved = goal.saved || 0;
+        const remaining = goal.amount - saved;
+        const percent = Math.min((saved / goal.amount) * 100, 100);
+        
+        let statusText = "";
+        if (remaining <= 0) {
+          if (!goal.completedOn) {
+              goal.completedOn = new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+              localStorage.setItem(GOALS_KEY, JSON.stringify(goals)); 
+          }
+          statusText = `Completed on ${goal.completedOn} 🎉`;
+        }
+        else if (daysLeft > 0) statusText = `Need Rs ${(remaining / daysLeft).toFixed(0)} / day`;
+        else statusText = "Target date passed";
 
-      goalsListEl.insertAdjacentHTML('beforeend', `
-        <div class="list-item" style="flex-direction: column; align-items: stretch;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-            <div class="item-info">
-              <h4>${goal.title}</h4>
-              <p>Rs ${saved.toLocaleString()} / Rs ${goal.amount.toLocaleString()}</p>
+        goalsListEl.insertAdjacentHTML('beforeend', `
+          <div class="list-item" style="flex-direction: column; align-items: stretch;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+              <div class="item-info" style="display:flex; align-items:center; gap:8px;">
+                <button onclick="deleteGoal('${goal.id}')" style="background:transparent; border:none; color:var(--expense-text); font-size:1.1rem; cursor:pointer; padding:0;">🗑️</button>
+                <div>
+                  <h4>${goal.title}</h4>
+                  <p>Rs ${saved.toLocaleString()} / Rs ${goal.amount.toLocaleString()}</p>
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <strong style="font-size:0.9rem;">${remaining <= 0 ? 'Done' : (daysLeft > 0 ? daysLeft + ' days left' : 'Due')}</strong>
+                <span style="display:block; font-size:0.75rem; color:var(--accent); font-weight:bold;">${statusText}</span>
+              </div>
             </div>
-            <div style="text-align: right;">
-              <strong style="font-size:0.9rem;">${daysLeft > 0 ? daysLeft + ' days left' : 'Due'}</strong>
-              <span style="display:block; font-size:0.75rem; color:var(--accent); font-weight:bold;">${statusText}</span>
+            <div class="progress-bar"><div class="progress-fill" style="width: ${percent}%"></div></div>
+            
+            ${remaining > 0 ? `
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+               <input type="number" id="deposit-amt-${index}" placeholder="Rs" min="0.01" step="0.01" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-main);">
+               <select id="deposit-wallet-${index}" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-main);"><option value="online">Online</option><option value="cash">Cash</option></select>
+               <button onclick="depositToGoal('${goal.id}', ${index})" class="primary-btn" style="padding: 8px; border-radius: 8px;">Add</button>
             </div>
+            ` : ''}
           </div>
-          <div class="progress-bar"><div class="progress-fill" style="width: ${percent}%"></div></div>
-          
-          <div style="display: flex; gap: 10px; margin-top: 15px;">
-             <input type="number" id="deposit-amt-${index}" placeholder="Rs" style="padding: 8px; border: 1px solid #ddd; border-radius: 8px;">
-             <select id="deposit-wallet-${index}" style="padding: 8px; border: 1px solid #ddd; border-radius: 8px;"><option value="online">Online</option><option value="cash">Cash</option></select>
-             <button onclick="depositToGoal('${goal.id}', ${index})" class="primary-btn" style="padding: 8px; border-radius: 8px;">Add</button>
-          </div>
-        </div>
-      `);
-    });
+        `);
+      });
+    }
   }
 
-  // --- FORM LISTENERS & ACTIONS ---
-  document.getElementById('add-tx-form').addEventListener('submit', function(e) {
-    e.preventDefault();
+  // --- SMART LOGGING ---
+  window.submitTx = function(type, wallet) {
+    const titleObj = document.getElementById('tx-title');
+    const amountObj = document.getElementById('tx-amount');
+    
+    if (!titleObj.value || !amountObj.value) {
+        showAlert("Oops!", "Please enter a title and amount first.", false);
+        return;
+    }
+
+    const amount = parseFloat(amountObj.value);
+    if (amount <= 0) {
+      showAlert("Invalid Amount", "Amount must be greater than 0.", false);
+      return;
+    }
+
+    // Check if expense would make balance negative
+    if (type === 'expense') {
+      const currentBalance = getWalletBalance(wallet);
+      if (currentBalance - amount < 0) {
+        showAlert("Insufficient Balance!", `You cannot spend Rs ${amount.toFixed(2)}. Your ${wallet} balance is only Rs ${currentBalance.toFixed(2)}.`, false);
+        return;
+      }
+    }
+
     const transactions = getTransactions();
     transactions.unshift({
       id: Date.now().toString(),
-      title: document.getElementById('tx-title').value,
-      amount: parseFloat(document.getElementById('tx-amount').value),
-      type: document.getElementById('tx-type').value,
-      wallet: document.getElementById('tx-wallet').value,
+      title: titleObj.value,
+      amount: amount,
+      type: type,
+      wallet: wallet,
       date: new Date().toISOString()
     });
     localStorage.setItem(TX_KEY, JSON.stringify(transactions));
-    this.reset();
+    
+    titleObj.value = "";
+    amountObj.value = "";
+    playSound(type === 'income' ? 'income' : 'expense');
+    vibrate(type === 'income' ? [50, 30, 50] : [100, 50, 100]);
     renderApp();
-  });
+  };
 
+  // --- WALLET TRANSFER ---
+  window.transferWallet = function(fromWallet, toWallet) {
+    const amtObj = document.getElementById('transfer-amt');
+    const amount = parseFloat(amtObj.value);
+    
+    if (!amount || amount <= 0) {
+      showAlert("Invalid Amount", "Enter an amount greater than 0.", false);
+      return;
+    }
+
+    // Check if source wallet has enough balance
+    const sourceBalance = getWalletBalance(fromWallet);
+    if (sourceBalance - amount < 0) {
+      showAlert("Insufficient Balance!", `You cannot transfer Rs ${amount}. Your ${fromWallet} balance is only Rs ${sourceBalance.toFixed(2)}.`, false);
+      return;
+    }
+
+    const transactions = getTransactions();
+    const timestamp = new Date().toISOString();
+    transactions.unshift({ id: Date.now().toString() + "A", title: "Wallet Transfer", amount: amount, type: 'expense', wallet: fromWallet, date: timestamp });
+    transactions.unshift({ id: Date.now().toString() + "B", title: "Wallet Transfer", amount: amount, type: 'income', wallet: toWallet, date: timestamp });
+    
+    localStorage.setItem(TX_KEY, JSON.stringify(transactions));
+    amtObj.value = "";
+    playSound('transfer');
+    vibrate([50, 50, 50]);
+    renderApp();
+  };
+
+  // --- GOALS ---
   document.getElementById('add-goal-form').addEventListener('submit', function(e) {
     e.preventDefault();
+    
+    // Validate target date is in the future
+    const targetDate = new Date(document.getElementById('goal-date').value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (targetDate < today) {
+      showAlert("Invalid Date", "Target date must be in the future.", false);
+      return;
+    }
+    
     const goals = getGoals();
     goals.push({
       id: Date.now().toString(),
@@ -384,23 +685,29 @@
     });
     localStorage.setItem(GOALS_KEY, JSON.stringify(goals));
     this.reset();
+    playSound('goal');
+    vibrate([30, 30, 30, 30, 30]);
     renderApp();
   });
 
   window.depositToGoal = function(goalId, index) {
     const amount = parseFloat(document.getElementById(`deposit-amt-${index}`).value);
     const wallet = document.getElementById(`deposit-wallet-${index}`).value;
-    if (!amount || amount <= 0) return alert("Enter a valid amount");
+    
+    if (!amount || amount <= 0) {
+      showAlert("Invalid Amount", "Enter an amount greater than 0.", false);
+      return;
+    }
+
+    // Check if wallet has enough balance
+    const walletBalance = getWalletBalance(wallet);
+    if (walletBalance - amount < 0) {
+      showAlert("Insufficient Balance!", `You cannot save Rs ${amount.toFixed(2)}. Your ${wallet} balance is only Rs ${walletBalance.toFixed(2)}.`, false);
+      return;
+    }
 
     const transactions = getTransactions();
-    transactions.unshift({
-      id: Date.now().toString(),
-      title: "Transfer to Vault",
-      amount: amount,
-      type: 'expense',
-      wallet: wallet,
-      date: new Date().toISOString()
-    });
+    transactions.unshift({ id: Date.now().toString(), title: "Transfer to Vault", amount: amount, type: 'expense', wallet: wallet, date: new Date().toISOString() });
     localStorage.setItem(TX_KEY, JSON.stringify(transactions));
 
     const goals = getGoals();
@@ -409,20 +716,37 @@
       goals[goalIndex].saved = (goals[goalIndex].saved || 0) + amount;
       localStorage.setItem(GOALS_KEY, JSON.stringify(goals));
     }
+    
+    document.getElementById(`deposit-amt-${index}`).value = "";
+    playSound('success');
+    vibrate([50, 30, 50, 30, 50]);
     renderApp();
   };
 
+  window.deleteGoal = function(id) {
+    showAlert("Delete Goal?", "Money saved inside it will NOT be returned to your wallet automatically. Proceed?", true, () => {
+      const goals = getGoals();
+      const updatedGoals = goals.filter(g => g.id !== id);
+      localStorage.setItem(GOALS_KEY, JSON.stringify(updatedGoals));
+      renderApp();
+    });
+  };
+
   window.deleteTransaction = function(id) {
-    if (!confirm("Delete this transaction? Your balances will update automatically.")) return;
-    const transactions = getTransactions();
-    const updatedTransactions = transactions.filter(tx => tx.id !== id);
-    localStorage.setItem(TX_KEY, JSON.stringify(updatedTransactions));
-    renderApp();
+    showAlert("Delete Entry?", "Your balances will update automatically. Proceed?", true, () => {
+      const transactions = getTransactions();
+      const updatedTransactions = transactions.filter(tx => tx.id !== id);
+      localStorage.setItem(TX_KEY, JSON.stringify(updatedTransactions));
+      renderApp();
+    });
   };
 
   window.downloadCSV = function() {
     const transactions = getTransactions();
-    if (transactions.length === 0) return alert("No data to export!");
+    if (transactions.length === 0) {
+      showAlert("Empty", "No data to export!", false);
+      return;
+    }
     let csvContent = "Date,Time,Title,Type,Wallet,Amount\n";
     transactions.forEach(tx => {
       const dateObj = new Date(tx.date);
@@ -441,7 +765,18 @@
     document.body.removeChild(link);
   };
 
-  // Start the engine
+  window.clearAllData = function() {
+    showAlert("Clear All Data?", "This will permanently delete all transactions, goals, and balances. This action cannot be undone.", true, () => {
+      localStorage.removeItem(TX_KEY);
+      localStorage.removeItem(GOALS_KEY);
+      playSound('expense');
+      vibrate([100, 100, 100]);
+      showAlert("Success!", "All data has been cleared. Refreshing app...", false, () => {
+        location.reload();
+      });
+    });
+  };
+
   renderApp();
 
 </script>
