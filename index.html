@@ -235,6 +235,23 @@
     <div class="list-container" id="history-list"></div>
   </div>
 
+  <div id="view-debts" class="view-section">
+    <h3 class="section-title">Create New Debt</h3>
+    <div class="card-panel">
+      <form id="add-debt-form">
+        <input type="text" id="debt-person" placeholder="Who do you owe money to?" required style="margin-bottom: 10px;">
+        <div class="form-group">
+          <input type="number" id="debt-amount" placeholder="Amount Rs" required min="0.01" step="0.01">
+          <input type="date" id="debt-due" required>
+        </div>
+        <button type="submit" class="primary-btn">Add Debt</button>
+      </form>
+    </div>
+    
+    <h3 class="section-title">Active Debts</h3>
+    <div class="list-container" id="debts-list"></div>
+  </div>
+
   <div id="view-settings" class="view-section">
     <h3 class="section-title">Settings & Data</h3>
     
@@ -271,7 +288,7 @@
 
     <div class="card-panel">
       <h3 style="margin:0 0 10px 0; color:var(--text-main);">About</h3>
-      <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">📊 My Finance Tracker v1.0</p>
+      <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">📊 My Finance Tracker v2.0</p>
       <p style="margin: 5px 0 0 0; font-size: 0.75rem; color: var(--text-muted);">Track your income, expenses, and savings goals with ease.</p>
     </div>
   </div>
@@ -287,6 +304,10 @@
     <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
     History
   </button>
+  <button class="nav-btn" onclick="switchTab('debts')" id="nav-debts">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+    Debts
+  </button>
   <button class="nav-btn" onclick="switchTab('savings')" id="nav-savings">
     <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.64-2.25 1.64-1.74 0-2.33-.77-2.42-1.76H7.76c.14 1.8 1.5 2.92 3.14 3.28V19h2.34v-1.6c1.62-.3 2.81-1.38 2.81-2.92 0-2.38-2.23-2.96-3.74-3.34z"/></svg>
     Savings
@@ -301,6 +322,8 @@
   const TX_KEY = 'tracker_tx_v4';
   const GOALS_KEY = 'tracker_goals_v4';
   const THEME_KEY = 'tracker_theme';
+  const DEBTS_KEY = 'tracker_debts_v1';
+  const DEBT_ALERTS_KEY = 'tracker_debt_alerts_v1';
 
   // --- AUDIO & VIBRATION ENGINE ---
   function playSound(type) {
@@ -430,6 +453,8 @@
 
   function getTransactions() { return JSON.parse(localStorage.getItem(TX_KEY)) || []; }
   function getGoals() { return JSON.parse(localStorage.getItem(GOALS_KEY)) || []; }
+  function getDebts() { return JSON.parse(localStorage.getItem(DEBTS_KEY)) || []; }
+  function getDebtAlerts() { return JSON.parse(localStorage.getItem(DEBT_ALERTS_KEY)) || {}; }
 
   // --- GET CURRENT WALLET BALANCE ---
   function getWalletBalance(wallet) {
@@ -447,10 +472,34 @@
   function renderApp() {
     const transactions = getTransactions();
     const goals = getGoals();
+    const debts = getDebts();
     
     let cashBal = 0, onlineBal = 0, vaultBal = 0;
     let todayIn = 0, todayOut = 0;
     const todayStr = new Date().toLocaleDateString('en-CA');
+
+    // CHECK FOR DEBT ALERTS
+    const spendableBal = cashBal + onlineBal;
+    const debtAlerts = getDebtAlerts();
+    debts.forEach(debt => {
+      if (!debt.isPaid && debt.id && !debtAlerts[debt.id]) {
+        // Calculate spendable balance first
+        let tempCash = 0, tempOnline = 0;
+        transactions.forEach(tx => {
+          const multiplier = tx.type === 'income' ? 1 : -1;
+          const finalAmt = tx.amount * multiplier;
+          if (tx.wallet === 'cash') tempCash += finalAmt;
+          else tempOnline += finalAmt;
+        });
+        const totalSpendable = tempCash + tempOnline;
+        
+        if (totalSpendable >= debt.amount) {
+          debtAlerts[debt.id] = true;
+          localStorage.setItem(DEBT_ALERTS_KEY, JSON.stringify(debtAlerts));
+          showAlert("💳 Pay Your Debt!", `You owe Rs ${debt.amount.toLocaleString()} to ${debt.person}. You now have enough money in your spendable balance!`, false);
+        }
+      }
+    });
 
     goals.forEach(g => { vaultBal += (g.saved || 0); });
 
@@ -586,6 +635,53 @@
           </div>
         `);
       });
+    }
+
+    // --- RENDER DEBTS ---
+    const debtsListEl = document.getElementById('debts-list');
+    if (debtsListEl) {
+      debtsListEl.innerHTML = '';
+      if (debts.length === 0) {
+        debtsListEl.innerHTML = '<div style="text-align: center; padding: 30px 20px; color: var(--text-muted);"><p style="font-size: 1.2rem; margin: 0 0 5px 0;">💳 No debts</p><p style="margin: 0; font-size: 0.9rem;">Add a debt when you owe money to someone.</p></div>';
+      } else {
+        debts.forEach((debt, index) => {
+          const dueDate = new Date(debt.dueDate);
+          const today = new Date();
+          today.setHours(0,0,0,0);
+          const diffTime = dueDate - today;
+          const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          let statusText = "";
+          if (debt.isPaid) {
+            statusText = `Paid on ${debt.paidOn || new Date().toLocaleDateString()} ✅`;
+          } else if (daysLeft > 0) {
+            statusText = `Due in ${daysLeft} days`;
+          } else if (daysLeft === 0) {
+            statusText = "Due today ⚠️";
+          } else {
+            statusText = "Overdue 🔴";
+          }
+
+          debtsListEl.insertAdjacentHTML('beforeend', `
+            <div class="list-item" style="flex-direction: column; align-items: stretch;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <div class="item-info">
+                  <h4>💰 ${debt.person}</h4>
+                  <p>Rs ${debt.amount.toLocaleString()} • ${new Date(debt.dueDate).toLocaleDateString()}</p>
+                </div>
+                <div style="text-align: right;">
+                  <strong style="font-size:0.9rem; color: ${debt.isPaid ? 'var(--income-text)' : 'var(--expense-text)'};">${debt.isPaid ? 'PAID' : 'PENDING'}</strong>
+                  <span style="display:block; font-size:0.75rem; color:var(--accent); font-weight:bold;">${statusText}</span>
+                </div>
+              </div>
+              <div style="display: flex; gap: 10px; margin-top: 10px;">
+                ${!debt.isPaid ? `<button onclick="markDebtPaid('${debt.id}')" class="primary-btn" style="padding: 8px; border-radius: 8px; background-color: var(--income-green); color: var(--income-text); border: none; font-weight: bold; cursor: pointer;">Mark as Paid</button>` : ''}
+                <button onclick="deleteDebt('${debt.id}')" style="background-color: var(--expense-red); color: var(--expense-text); border: none; border-radius: 8px; padding: 8px; cursor: pointer; font-weight: bold;">Delete</button>
+              </div>
+            </div>
+          `);
+        });
+      }
     }
   }
 
@@ -741,12 +837,126 @@
     });
   };
 
+  // --- DEBT MANAGEMENT ---
+  document.getElementById('add-debt-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const person = document.getElementById('debt-person').value;
+    const amount = parseFloat(document.getElementById('debt-amount').value);
+    const dueDate = document.getElementById('debt-due').value;
+    
+    if (!person || !amount || !dueDate) {
+      showAlert("Incomplete", "Please fill in all fields.", false);
+      return;
+    }
+
+    if (amount <= 0) {
+      showAlert("Invalid Amount", "Amount must be greater than 0.", false);
+      return;
+    }
+
+    const debts = getDebts();
+    debts.push({
+      id: Date.now().toString(),
+      person: person,
+      amount: amount,
+      dueDate: dueDate,
+      isPaid: false,
+      createdOn: new Date().toISOString()
+    });
+    localStorage.setItem(DEBTS_KEY, JSON.stringify(debts));
+    
+    this.reset();
+    playSound('income');
+    vibrate([50, 30, 50]);
+    renderApp();
+    showAlert("Debt Added!", `You owe Rs ${amount.toLocaleString()} to ${person}.`, false);
+  });
+
+  window.markDebtPaid = function(debtId) {
+    const debts = getDebts();
+    const debtIndex = debts.findIndex(d => d.id === debtId);
+    if (debtIndex === -1) return;
+    
+    const debt = debts[debtIndex];
+    const onlineBalance = getWalletBalance('online');
+    const cashBalance = getWalletBalance('cash');
+    
+    // Build available wallets
+    let walletOptions = '';
+    if (onlineBalance >= debt.amount) walletOptions += '<option value="online">Online (Rs ' + onlineBalance.toLocaleString() + ')</option>';
+    if (cashBalance >= debt.amount) walletOptions += '<option value="cash">Cash (Rs ' + cashBalance.toLocaleString() + ')</option>';
+    
+    if (!walletOptions) {
+      showAlert("Insufficient Balance!", `You need Rs ${debt.amount.toLocaleString()} to pay this debt. Online: Rs ${onlineBalance.toLocaleString()}, Cash: Rs ${cashBalance.toLocaleString()}.`, false);
+      return;
+    }
+    
+    // Create a temporary container to capture wallet selection
+    const tempDiv = document.createElement('div');
+    tempDiv.style.display = 'none';
+    tempDiv.innerHTML = `<select id="temp-wallet-select">${walletOptions}</select>`;
+    document.body.appendChild(tempDiv);
+    
+    // Show confirmation with wallet choice
+    const selectedWallet = document.querySelector('#temp-wallet-select').value;
+    
+    showAlert("Deduct from Wallet?", `Pay Rs ${debt.amount.toLocaleString()} to ${debt.person} from ${selectedWallet.toUpperCase()} wallet?`, true, () => {
+      const transactions = getTransactions();
+      transactions.unshift({
+        id: Date.now().toString(),
+        title: `Debt Payment - ${debt.person}`,
+        amount: debt.amount,
+        type: 'expense',
+        wallet: selectedWallet,
+        date: new Date().toISOString()
+      });
+      localStorage.setItem(TX_KEY, JSON.stringify(transactions));
+      
+      debts[debtIndex].isPaid = true;
+      debts[debtIndex].paidOn = new Date().toLocaleDateString();
+      localStorage.setItem(DEBTS_KEY, JSON.stringify(debts));
+      
+      playSound('success');
+      vibrate([50, 30, 50, 30, 50]);
+      renderApp();
+      showAlert("Debt Paid!", `Rs ${debt.amount.toLocaleString()} deducted from ${selectedWallet} wallet. Debt to ${debt.person} is now marked as paid.`, false);
+    });
+    
+    document.body.removeChild(tempDiv);
+  };
+
+  window.deleteDebt = function(id) {
+    showAlert("Delete Debt?", "This debt record will be permanently removed.", true, () => {
+      const debts = getDebts();
+      const updatedDebts = debts.filter(d => d.id !== id);
+      localStorage.setItem(DEBTS_KEY, JSON.stringify(updatedDebts));
+      
+      // Also remove the alert flag
+      const debtAlerts = getDebtAlerts();
+      if (debtAlerts[id]) delete debtAlerts[id];
+      localStorage.setItem(DEBT_ALERTS_KEY, JSON.stringify(debtAlerts));
+      
+      renderApp();
+    });
+  };
+
   window.downloadCSV = function() {
     const transactions = getTransactions();
     if (transactions.length === 0) {
       showAlert("Empty", "No data to export!", false);
       return;
     }
+    
+    // Calculate totals
+    let totalIncome = 0, totalExpense = 0;
+    transactions.forEach(tx => {
+      if (tx.type === 'income') totalIncome += tx.amount;
+      else totalExpense += tx.amount;
+    });
+    const netBalance = totalIncome - totalExpense;
+    
+    // Build CSV with header and data
     let csvContent = "Date,Time,Title,Type,Wallet,Amount\n";
     transactions.forEach(tx => {
       const dateObj = new Date(tx.date);
@@ -755,6 +965,14 @@
       const safeTitle = `"${tx.title.replace(/"/g, '""')}"`; 
       csvContent += `${dateStr},${timeStr},${safeTitle},${tx.type},${tx.wallet},${tx.amount}\n`;
     });
+    
+    // Add summary section
+    csvContent += "\n\n--- SUMMARY ---\n";
+    csvContent += `Total Income,${totalIncome}\n`;
+    csvContent += `Total Expense,${totalExpense}\n`;
+    csvContent += `Net Balance,${netBalance}\n`;
+    csvContent += `Export Date,"${new Date().toLocaleString()}"\n`;
+    
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -766,9 +984,11 @@
   };
 
   window.clearAllData = function() {
-    showAlert("Clear All Data?", "This will permanently delete all transactions, goals, and balances. This action cannot be undone.", true, () => {
+    showAlert("Clear All Data?", "This will permanently delete all transactions, goals, debts, and balances. This action cannot be undone.", true, () => {
       localStorage.removeItem(TX_KEY);
       localStorage.removeItem(GOALS_KEY);
+      localStorage.removeItem(DEBTS_KEY);
+      localStorage.removeItem(DEBT_ALERTS_KEY);
       playSound('expense');
       vibrate([100, 100, 100]);
       showAlert("Success!", "All data has been cleared. Refreshing app...", false, () => {
